@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "Calendar Agent",
   description: "An AI assistant that manages your Google Calendar through natural conversation.",
   generator: "v0.app",
+  verification: {
+    google: "bkEg9Obqn4nq8abJN4I3uxXEshmO6FPMpmB7-zBTBlM",
+  },
 }
 
 export const viewport: Viewport = {
