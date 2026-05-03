@@ -10,10 +10,10 @@ export async function GET(req: Request) {
   const baseUrl = `${url.protocol}//${url.host}`
 
   if (error) {
-    return NextResponse.redirect(`${baseUrl}/?auth_error=${encodeURIComponent(error)}`)
+    return NextResponse.redirect(`${baseUrl}/app?auth_error=${encodeURIComponent(error)}`)
   }
   if (!code) {
-    return NextResponse.redirect(`${baseUrl}/?auth_error=missing_code`)
+    return NextResponse.redirect(`${baseUrl}/app?auth_error=missing_code`)
   }
 
   const cookieHeader = req.headers.get("cookie") ?? ""
@@ -24,14 +24,14 @@ export async function GET(req: Request) {
     ?.split("=")[1]
 
   if (!cookieState || cookieState !== state) {
-    return NextResponse.redirect(`${baseUrl}/?auth_error=state_mismatch`)
+    return NextResponse.redirect(`${baseUrl}/app?auth_error=state_mismatch`)
   }
 
   try {
     const redirectUri = getRedirectUri(req)
     const tokens = await exchangeCodeForTokens(code, redirectUri)
 
-    const res = NextResponse.redirect(`${baseUrl}/?auth=success`)
+    const res = NextResponse.redirect(`${baseUrl}/app?auth=success`)
     res.cookies.set(GOOGLE_TOKENS_COOKIE, JSON.stringify(tokens), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -43,6 +43,6 @@ export async function GET(req: Request) {
     return res
   } catch (e) {
     const message = e instanceof Error ? e.message : "unknown_error"
-    return NextResponse.redirect(`${baseUrl}/?auth_error=${encodeURIComponent(message)}`)
+    return NextResponse.redirect(`${baseUrl}/app?auth_error=${encodeURIComponent(message)}`)
   }
 }
