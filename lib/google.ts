@@ -163,6 +163,39 @@ export type CalendarEvent = {
   attendees?: { email: string; responseStatus?: string }[]
 }
 
+export class GoogleCalendarError extends Error {
+  status: number
+  reason?: string
+  activationUrl?: string
+  constructor(status: number, message: string, opts?: { reason?: string; activationUrl?: string }) {
+    super(message)
+    this.name = "GoogleCalendarError"
+    this.status = status
+    this.reason = opts?.reason
+    this.activationUrl = opts?.activationUrl
+  }
+}
+
+function parseGoogleError(status: number, text: string): GoogleCalendarError {
+  try {
+    const parsed = JSON.parse(text) as {
+      error?: {
+        message?: string
+        errors?: { reason?: string }[]
+        details?: { reason?: string; metadata?: { activationUrl?: string; service?: string } }[]
+      }
+    }
+    const err = parsed.error
+    const reason =
+      err?.errors?.[0]?.reason ?? err?.details?.find((d) => d?.reason)?.reason ?? undefined
+    const activationUrl = err?.details?.find((d) => d?.metadata?.activationUrl)?.metadata?.activationUrl
+    const message = err?.message ?? `Google Calendar API ${status}`
+    return new GoogleCalendarError(status, message, { reason, activationUrl })
+  } catch {
+    return new GoogleCalendarError(status, `Google Calendar API ${status}: ${text.slice(0, 200)}`)
+  }
+}
+
 async function gcalFetch(path: string, init: RequestInit = {}) {
   const accessToken = await getValidAccessToken()
   if (!accessToken) throw new Error("Not authenticated with Google")
@@ -176,7 +209,7 @@ async function gcalFetch(path: string, init: RequestInit = {}) {
   })
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Google Calendar API ${res.status}: ${text}`)
+    throw parseGoogleError(res.status, text)
   }
   return res.json()
 }
