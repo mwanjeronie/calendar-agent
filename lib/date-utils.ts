@@ -9,6 +9,59 @@ export type CalendarEvent = {
   end: { dateTime?: string; date?: string; timeZone?: string }
   htmlLink?: string
   attendees?: { email: string; responseStatus?: string }[]
+  hangoutLink?: string
+  conferenceData?: {
+    entryPoints?: { entryPointType?: string; uri?: string; label?: string }[]
+    conferenceSolution?: { name?: string; iconUri?: string }
+  }
+}
+
+const VIDEO_HOST_RE =
+  /\b(?:meet\.google\.com|zoom\.us|zoom\.com|teams\.microsoft\.com|teams\.live\.com|webex\.com|gotomeeting\.com|whereby\.com|around\.co|meet\.jit\.si|jitsi\.org|riverside\.fm|huddle\.com)\b/i
+
+export function getMeetingLink(e: CalendarEvent): { url: string; provider: string } | null {
+  // 1. Google Meet's dedicated field
+  if (e.hangoutLink) return { url: e.hangoutLink, provider: "Google Meet" }
+
+  // 2. Conference data entry points
+  const ep = e.conferenceData?.entryPoints?.find((p) => p.entryPointType === "video" && p.uri)
+  if (ep?.uri) {
+    const provider = e.conferenceData?.conferenceSolution?.name ?? providerFromUrl(ep.uri)
+    return { url: ep.uri, provider }
+  }
+
+  // 3. Scan location and description for video URLs
+  const haystack = `${e.location ?? ""}\n${e.description ?? ""}`
+  const urlMatch = haystack.match(/https?:\/\/[^\s<>"')]+/g)
+  if (urlMatch) {
+    for (const url of urlMatch) {
+      if (VIDEO_HOST_RE.test(url)) {
+        return { url, provider: providerFromUrl(url) }
+      }
+    }
+  }
+  return null
+}
+
+export function isVirtualMeeting(e: CalendarEvent): boolean {
+  return getMeetingLink(e) !== null
+}
+
+function providerFromUrl(url: string): string {
+  try {
+    const host = new URL(url).hostname.toLowerCase()
+    if (host.includes("meet.google.com")) return "Google Meet"
+    if (host.includes("zoom.us") || host.includes("zoom.com")) return "Zoom"
+    if (host.includes("teams.microsoft") || host.includes("teams.live")) return "Microsoft Teams"
+    if (host.includes("webex.com")) return "Webex"
+    if (host.includes("gotomeeting.com")) return "GoToMeeting"
+    if (host.includes("whereby.com")) return "Whereby"
+    if (host.includes("jit.si") || host.includes("jitsi")) return "Jitsi"
+    if (host.includes("riverside.fm")) return "Riverside"
+    return host.replace(/^www\./, "")
+  } catch {
+    return "Video call"
+  }
 }
 
 export function getWeekDays(anchor: Date): Date[] {
