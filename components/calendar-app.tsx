@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import useSWR from "swr"
 import { addDays, format, startOfWeek } from "date-fns"
-import { CalendarDays, ChevronLeft, ChevronRight, LogOut, RefreshCcw } from "lucide-react"
-import { toast } from "sonner"
+import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, ExternalLink, LogOut, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { WeekView } from "@/components/week-view"
@@ -14,16 +13,26 @@ import { type CalendarEvent, formatRangeLabel } from "@/lib/date-utils"
 
 type Profile = { email?: string; name?: string; picture?: string }
 type StatusResponse = { authenticated: boolean; configured: boolean; profile?: Profile }
-type EventsResponse = { events: CalendarEvent[]; error?: string }
+type EventsResponse = {
+  events: CalendarEvent[]
+  error?: string
+  reason?: string
+  activationUrl?: string
+}
 
-const fetcher = async (url: string) => {
+const fetcher = async (url: string): Promise<EventsResponse> => {
   const res = await fetch(url, { cache: "no-store" })
+  const data = (await res.json().catch(() => ({}))) as EventsResponse
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    const err = new Error(data.error || `Request failed: ${res.status}`)
-    throw err
+    // Return the structured error instead of throwing so we can render it inline
+    return {
+      events: [],
+      error: data.error || `Request failed: ${res.status}`,
+      reason: data.reason,
+      activationUrl: data.activationUrl,
+    }
   }
-  return res.json()
+  return data
 }
 
 export function CalendarApp() {
@@ -52,13 +61,13 @@ export function CalendarApp() {
     mutate: refetchEvents,
   } = useSWR<EventsResponse>(eventsKey, fetcher, {
     revalidateOnFocus: false,
-    onError: (e) => {
-      toast.error(e instanceof Error ? e.message : "Failed to load events")
-    },
   })
 
   const events = eventsData?.events ?? []
   const profile = status?.profile ?? null
+  const eventsError = eventsData?.error ?? null
+  const isApiDisabled =
+    !!eventsError && (eventsData?.reason === "SERVICE_DISABLED" || eventsData?.reason === "accessNotConfigured")
 
   // If status check confirms not authenticated, reload to show connect screen
   useEffect(() => {
@@ -155,6 +164,54 @@ export function CalendarApp() {
           </div>
         </div>
       </header>
+
+      {eventsError ? (
+        <div
+          role="alert"
+          className="border-b border-destructive/30 bg-destructive/10 px-4 py-3 md:px-6"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
+            <div className="flex-1 text-sm">
+              {isApiDisabled ? (
+                <>
+                  <p className="font-medium text-destructive">Google Calendar API is not enabled</p>
+                  <p className="mt-1 text-destructive/80">
+                    Enable it in your Google Cloud project, wait a minute for it to propagate, then refresh.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-medium text-destructive">Couldn&apos;t load events</p>
+                  <p className="mt-1 break-words text-destructive/80">{eventsError}</p>
+                </>
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {eventsData?.activationUrl ? (
+                <a
+                  href={eventsData.activationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-md border border-destructive/40 bg-background px-2.5 py-1 text-xs font-medium text-destructive hover:bg-destructive/5"
+                >
+                  Enable API
+                  <ExternalLink className="h-3 w-3" aria-hidden />
+                </a>
+              ) : null}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetchEvents()}
+                disabled={loading}
+                className="h-7 border-destructive/40 text-destructive hover:bg-destructive/5"
+              >
+                Retry
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 lg:grid-cols-[1fr_380px] lg:p-4">
         <section className="min-h-0">

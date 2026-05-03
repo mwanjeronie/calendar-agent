@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { listEvents, readTokensFromCookies } from "@/lib/google"
+import { GoogleCalendarError, listEvents, readTokensFromCookies } from "@/lib/google"
 
 export async function GET(req: Request) {
   const tokens = await readTokensFromCookies()
@@ -16,6 +16,17 @@ export async function GET(req: Request) {
     const events = await listEvents({ timeMin, timeMax })
     return NextResponse.json({ events })
   } catch (e) {
+    if (e instanceof GoogleCalendarError) {
+      return NextResponse.json(
+        {
+          error: e.message,
+          reason: e.reason,
+          activationUrl: e.activationUrl,
+          events: [],
+        },
+        { status: e.status },
+      )
+    }
     const message = e instanceof Error ? e.message : "unknown"
     return NextResponse.json({ error: message, events: [] }, { status: 500 })
   }

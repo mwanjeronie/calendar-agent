@@ -82,7 +82,7 @@ export function ChatPanel({ onCalendarChange }: { onCalendarChange?: () => void 
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-semibold leading-tight">Calendar Agent</span>
-            <span className="text-[10px] text-muted-foreground">Powered by Gemini 3 Flash</span>
+            <span className="text-[10px] text-muted-foreground">Powered by Gemini 2.5 Flash</span>
           </div>
         </div>
         {isBusy ? (

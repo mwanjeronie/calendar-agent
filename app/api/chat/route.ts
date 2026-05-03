@@ -1,4 +1,5 @@
 import { convertToModelMessages, streamText, tool, stepCountIs, type UIMessage } from "ai"
+import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { z } from "zod"
 import { createEvent, deleteEvent, listEvents, readTokensFromCookies, updateEvent } from "@/lib/google"
 
@@ -12,6 +13,18 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "application/json" },
     })
   }
+
+  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  if (!apiKey) {
+    return new Response(
+      JSON.stringify({
+        error:
+          "GOOGLE_GENERATIVE_AI_API_KEY is not set. Get a free key at https://aistudio.google.com/apikey and add it in Project Settings → Vars.",
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    )
+  }
+  const google = createGoogleGenerativeAI({ apiKey })
 
   const { messages, timeZone } = (await req.json()) as {
     messages: UIMessage[]
@@ -134,7 +147,7 @@ Guidelines:
 - Today's date is ${now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: tz })}.`
 
   const result = streamText({
-    model: "google/gemini-3-flash",
+    model: google("gemini-2.5-flash"),
     system,
     messages: await convertToModelMessages(messages),
     tools,
