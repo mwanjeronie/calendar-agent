@@ -1,59 +1,110 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { CalendarDays, ShieldAlert } from "lucide-react"
+import { ShieldAlert } from "lucide-react"
 
 export function ConnectGoogle({ configured }: { configured: boolean }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
-      <div className="w-full max-w-lg rounded-xl border border-border bg-card p-8 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-            <CalendarDays className="h-6 w-6 text-primary" aria-hidden />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-balance">Calendar Agent</h1>
-            <p className="text-sm text-muted-foreground">Your AI-powered Google Calendar assistant</p>
-          </div>
-        </div>
-
-        <div className="mt-6 space-y-3 text-sm leading-relaxed text-muted-foreground">
-          <p>
-            Connect your Google Calendar to chat with an AI that can view your schedule, create events, reschedule,
-            and answer questions about your week.
-          </p>
-        </div>
-
-        {!configured ? (
-          <div className="mt-6 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
-            <div className="space-y-2 text-foreground">
-              <p className="font-medium">Google OAuth is not configured.</p>
-              <p className="text-muted-foreground">
-                Set the <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">GOOGLE_CLIENT_ID</code> and{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">GOOGLE_CLIENT_SECRET</code>{" "}
-                environment variables in your project settings, then add{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">/api/auth/google/callback</code> as
-                an authorized redirect URI in the Google Cloud console.
-              </p>
-            </div>
-          </div>
-        ) : null}
-
-        <div className="mt-8">
-          <Button asChild size="lg" className="w-full" disabled={!configured}>
-            <a href="/api/auth/google" aria-disabled={!configured}>
-              <GoogleIcon className="h-4 w-4" />
-              Connect Google Calendar
+    <div className="flex min-h-screen flex-col bg-background">
+      <header className="border-b border-border/80">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 md:px-6">
+          <a href="/" className="flex items-center gap-2.5">
+            <span
+              aria-hidden
+              className="flex h-7 w-7 items-center justify-center rounded-sm bg-foreground font-serif text-[15px] leading-none text-background"
+            >
+              <span className="-mt-px italic">C</span>
+            </span>
+            <span className="font-medium tracking-tight">Calendar Agent</span>
+          </a>
+          <nav className="flex items-center gap-5 text-sm text-muted-foreground">
+            <a href="/privacy" className="hover:text-foreground">
+              Privacy
             </a>
-          </Button>
+            <a href="/terms" className="hover:text-foreground">
+              Terms
+            </a>
+          </nav>
         </div>
+      </header>
 
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          We request read & write access to your primary calendar. You can disconnect at any time.
-        </p>
-      </div>
+      <main className="flex flex-1 items-center justify-center px-4 py-16 md:px-6">
+        <div className="w-full max-w-md">
+          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            <span aria-hidden className="inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
+            Connect your account
+          </p>
+
+          <h1 className="mt-5 text-balance text-[2rem] leading-[1.1] tracking-tight md:text-[2.4rem]">
+            Sign in to start{" "}
+            <span className="font-serif italic font-normal">talking to your calendar.</span>
+          </h1>
+
+          <p className="mt-5 text-pretty text-muted-foreground leading-relaxed">
+            Calendar Agent connects to your primary Google Calendar so the AI can answer questions about your week, create
+            events, and reschedule on your behalf.
+          </p>
+
+          {!configured ? (
+            <div
+              role="alert"
+              className="mt-6 flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm"
+            >
+              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
+              <div className="space-y-2">
+                <p className="font-medium">Google OAuth is not configured.</p>
+                <p className="text-muted-foreground">
+                  Set the{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-[12px]">GOOGLE_CLIENT_ID</code> and{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-[12px]">GOOGLE_CLIENT_SECRET</code> environment
+                  variables, then add{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 text-[12px]">/api/auth/google/callback</code> as an
+                  authorized redirect URI in Google Cloud Console.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="mt-8">
+            <Button asChild size="lg" className="h-11 w-full rounded-md" disabled={!configured}>
+              <a href="/api/auth/google" aria-disabled={!configured}>
+                <GoogleIcon className="h-4 w-4" />
+                Continue with Google
+              </a>
+            </Button>
+          </div>
+
+          <ul className="mt-8 space-y-3 border-t border-border/80 pt-6 text-sm text-muted-foreground">
+            <Bullet>Read &amp; write access to your primary calendar only.</Bullet>
+            <Bullet>Calendar contents are fetched on demand, not stored.</Bullet>
+            <Bullet>Disconnect any time from inside the app.</Bullet>
+          </ul>
+        </div>
+      </main>
+
+      <footer className="border-t border-border/80">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 text-xs text-muted-foreground md:px-6">
+          <p>&copy; {new Date().getFullYear()} Calendar Agent</p>
+          <nav className="flex items-center gap-4">
+            <a href="/privacy" className="hover:text-foreground">
+              Privacy
+            </a>
+            <a href="/terms" className="hover:text-foreground">
+              Terms
+            </a>
+          </nav>
+        </div>
+      </footer>
     </div>
+  )
+}
+
+function Bullet({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-3">
+      <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-full bg-foreground/40" />
+      <span className="leading-relaxed">{children}</span>
+    </li>
   )
 }
 

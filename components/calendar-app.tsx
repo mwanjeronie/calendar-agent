@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import useSWR from "swr"
 import { addDays, format, startOfWeek } from "date-fns"
-import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, ExternalLink, LogOut, RefreshCcw } from "lucide-react"
+import { AlertTriangle, ChevronLeft, ChevronRight, ExternalLink, LogOut, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { WeekView } from "@/components/week-view"
@@ -95,15 +95,22 @@ export function CalendarApp() {
 
   return (
     <div className="flex h-dvh flex-col bg-background">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card/50 px-4 py-3 backdrop-blur md:px-6">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 bg-card/60 px-4 py-3 backdrop-blur md:px-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <CalendarDays className="h-5 w-5" aria-hidden />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-sm font-semibold leading-tight tracking-tight">Calendar Agent</h1>
-            <p className="text-xs text-muted-foreground">{formatRangeLabel(weekStart, addDays(weekEnd, -1))}</p>
-          </div>
+          <a href="/" className="flex items-center gap-2.5">
+            <span
+              aria-hidden
+              className="flex h-8 w-8 items-center justify-center rounded-sm bg-foreground font-serif text-[17px] leading-none text-background"
+            >
+              <span className="-mt-px italic">C</span>
+            </span>
+            <div className="flex flex-col">
+              <h1 className="text-sm font-medium leading-tight tracking-tight">Calendar Agent</h1>
+              <p className="text-[11px] tabular-nums text-muted-foreground">
+                {formatRangeLabel(weekStart, addDays(weekEnd, -1))}
+              </p>
+            </div>
+          </a>
         </div>
 
         <div className="flex items-center gap-2">
@@ -221,6 +228,16 @@ export function CalendarApp() {
           <ChatPanel onCalendarChange={() => refetchEvents()} />
         </aside>
       </main>
+
+      <footer className="flex items-center justify-end gap-4 border-t border-border bg-card/30 px-4 py-2 text-[11px] text-muted-foreground md:px-6">
+        <a href="/privacy" className="hover:text-foreground">
+          Privacy
+        </a>
+        <span aria-hidden>·</span>
+        <a href="/terms" className="hover:text-foreground">
+          Terms
+        </a>
+      </footer>
 
       <EventDetail event={selected} onOpenChange={(open) => !open && setSelected(null)} />
     </div>

@@ -146,13 +146,32 @@ Guidelines:
 - If a request is ambiguous (e.g. "schedule a meeting"), ask one clarifying question.
 - Today's date is ${now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: tz })}.`
 
+  const model = google("gemini-2.5-flash")
+  console.log("[v0] chat route using provider:", model.provider, "model:", model.modelId)
+
   const result = streamText({
-    model: google("gemini-2.5-flash"),
+    model,
     system,
     messages: await convertToModelMessages(messages),
     tools,
     stopWhen: stepCountIs(8),
+    onError: ({ error }) => {
+      console.log("[v0] streamText error:", error instanceof Error ? error.message : String(error))
+    },
   })
 
-  return result.toUIMessageStreamResponse()
+  return result.toUIMessageStreamResponse({
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error)
+      console.log("[v0] toUIMessageStreamResponse error:", message)
+      // Translate any AI Gateway error into a clear message that points at the real fix.
+      if (message.includes("Free credits") || message.includes("AI Gateway") || message.includes("ai-gateway")) {
+        return "The Vercel AI Gateway was unexpectedly invoked. This deployment is configured to call Google Gemini directly. Please redeploy to pick up the latest configuration."
+      }
+      if (message.toLowerCase().includes("api key") || message.toLowerCase().includes("api_key")) {
+        return "Google Gemini rejected the API key. Verify GOOGLE_GENERATIVE_AI_API_KEY in Project Settings → Vars."
+      }
+      return message
+    },
+  })
 }
