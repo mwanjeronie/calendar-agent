@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
-import { ArrowUp, CalendarPlus, CheckCircle2, Clock, Loader2, Pencil, Sparkles, Trash2 } from "lucide-react"
+import { ArrowUp, CalendarPlus, CheckCircle2, Clock, Loader2, Pencil, RotateCcw, Sparkles, Trash2 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -32,7 +32,7 @@ export function ChatPanel({ onCalendarChange }: { onCalendarChange?: () => void 
       ? Intl.DateTimeFormat().resolvedOptions().timeZone
       : "UTC"
 
-  const { messages, sendMessage, status, error, stop } = useChat({
+  const { messages, setMessages, sendMessage, status, error, stop } = useChat({
     transport: new DefaultChatTransport({
       api: "/api/chat",
       prepareSendMessagesRequest: ({ messages }) => ({
@@ -85,11 +85,26 @@ export function ChatPanel({ onCalendarChange }: { onCalendarChange?: () => void 
             <span className="text-[10px] text-muted-foreground">Powered by Gemini 2.5 Flash</span>
           </div>
         </div>
-        {isBusy ? (
-          <Button type="button" variant="ghost" size="sm" onClick={() => stop()}>
-            Stop
-          </Button>
-        ) : null}
+        <div className="flex items-center gap-1">
+          {messages.length > 0 && !isBusy ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setMessages([])}
+              className="h-8 gap-1.5 px-2 text-xs"
+              aria-label="Clear conversation"
+            >
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+              Clear
+            </Button>
+          ) : null}
+          {isBusy ? (
+            <Button type="button" variant="ghost" size="sm" onClick={() => stop()}>
+              Stop
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       <div ref={scrollerRef} className="flex-1 overflow-y-auto px-4 py-4">
@@ -113,8 +128,20 @@ export function ChatPanel({ onCalendarChange }: { onCalendarChange?: () => void 
       </div>
 
       {error ? (
-        <div className="border-t border-destructive/30 bg-destructive/5 px-4 py-2 text-xs text-destructive">
-          {error.message || "Something went wrong."}
+        <div className="border-t border-destructive/30 bg-destructive/5 px-4 py-2.5 text-xs text-destructive">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">Couldn&apos;t complete that request</p>
+              <p className="mt-0.5 break-words text-destructive/80">{error.message || "Something went wrong."}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMessages([])}
+              className="shrink-0 rounded border border-destructive/40 px-2 py-1 font-medium hover:bg-destructive/10"
+            >
+              Reset
+            </button>
+          </div>
         </div>
       ) : null}
 
