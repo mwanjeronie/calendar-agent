@@ -52,6 +52,16 @@ export function ConnectGoogle({ configured }: { configured: boolean }) {
         <p className="mt-4 text-center text-xs text-muted-foreground">
           We request read & write access to your primary calendar. You can disconnect at any time.
         </p>
+
+        <div className="mt-6 flex items-center justify-center gap-4 border-t border-border pt-4 text-xs text-muted-foreground">
+          <a href="/privacy" className="hover:text-foreground">
+            Privacy Policy
+          </a>
+          <span aria-hidden>·</span>
+          <a href="/terms" className="hover:text-foreground">
+            Terms of Service
+          </a>
+        </div>
       </div>
     </div>
   )
