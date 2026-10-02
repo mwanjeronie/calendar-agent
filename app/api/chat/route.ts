@@ -146,7 +146,7 @@ Guidelines:
 - If a request is ambiguous (e.g. "schedule a meeting"), ask one clarifying question.
 - Today's date is ${now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: tz })}.`
 
-  const model = google("gemini-3.6-flash")
+  const model = google("gemini-3.5-flash-lite")
   console.log("[v0] chat route using provider:", model.provider, "model:", model.modelId)
 
   const result = streamText({
