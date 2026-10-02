@@ -51,7 +51,7 @@ function ChatHeader({ actions }: { actions?: React.ReactNode }) {
         </span>
         <div className="flex flex-col">
           <span className="text-sm font-medium leading-tight tracking-tight">Calendar Assistant</span>
-          <span className="text-[11px] text-muted-foreground">Gemini 3.6 Flash</span>
+          <span className="text-[11px] text-muted-foreground">Gemini 3.5 Flash Lite</span>
         </div>
       </div>
       <div className="flex items-center gap-1">{actions}</div>
