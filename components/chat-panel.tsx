@@ -1,9 +1,9 @@
 "use client"
 
 import { useChat } from "@ai-sdk/react"
-import { DefaultChatTransport } from "ai"
+import { DefaultChatTransport, type UIMessage } from "ai"
 import { ArrowUp, CalendarPlus, CheckCircle2, Clock, Loader2, Pencil, RotateCcw, Sparkles, Trash2 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -24,21 +24,148 @@ const SUGGESTIONS = [
   "Find a free hour this week for lunch",
 ]
 
+type ChatHistoryState = {
+  conversationId: string | null
+  messages: UIMessage[]
+}
+
+function formatError(message: string) {
+  try {
+    const parsed = JSON.parse(message) as { error?: unknown }
+    if (typeof parsed.error === "string" && parsed.error.trim()) return parsed.error
+  } catch {
+    // The chat API sometimes returns a plain sentence, sometimes a JSON body.
+  }
+  return message || "Something went wrong."
+}
+
+function ChatHeader({ actions }: { actions?: React.ReactNode }) {
+  return (
+    <header className="flex items-center justify-between border-b border-border/80 px-4 py-3">
+      <div className="flex items-center gap-2.5">
+        <span
+          aria-hidden
+          className="flex h-7 w-7 items-center justify-center rounded-sm bg-foreground font-serif text-[14px] leading-none text-background"
+        >
+          <span className="-mt-px italic">C</span>
+        </span>
+        <div className="flex flex-col">
+          <span className="text-sm font-medium leading-tight tracking-tight">Calendar Assistant</span>
+          <span className="text-[11px] text-muted-foreground">Gemini 3.6 Flash</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">{actions}</div>
+    </header>
+  )
+}
+
 export function ChatPanel({ onCalendarChange }: { onCalendarChange?: () => void }) {
+  const [history, setHistory] = useState<ChatHistoryState | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch("/api/chat/history")
+      .then((res) => (res.ok ? res.json() : { conversationId: null, messages: [] }))
+      .then((data: ChatHistoryState) => {
+        if (cancelled) return
+        setHistory({
+          conversationId: data.conversationId ?? null,
+          messages: Array.isArray(data.messages) ? data.messages : [],
+        })
+      })
+      .catch(() => {
+        if (!cancelled) setHistory({ conversationId: null, messages: [] })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const restart = async () => {
+    let conversationId: string | null = null
+    try {
+      const res = await fetch("/api/chat/new", { method: "POST" })
+      if (res.ok) {
+        const data = (await res.json()) as ChatHistoryState
+        conversationId = data.conversationId ?? null
+      }
+    } catch {
+      conversationId = null
+    }
+    setHistory({
+      conversationId: conversationId ?? crypto.randomUUID(),
+      messages: [],
+    })
+  }
+
+  if (!history) {
+    return (
+      <div className="flex h-full min-h-0 flex-col rounded-xl border border-border bg-card">
+        <ChatHeader />
+        <div className="flex flex-1 items-center justify-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+          Loading conversation…
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <ChatThread
+      key={history.conversationId ?? "local"}
+      conversationId={history.conversationId}
+      initialMessages={history.messages}
+      onCalendarChange={onCalendarChange}
+      onRestart={restart}
+    />
+  )
+}
+
+function ChatThread({
+  conversationId,
+  initialMessages,
+  onCalendarChange,
+  onRestart,
+}: {
+  conversationId: string | null
+  initialMessages: ChatHistoryState["messages"]
+  onCalendarChange?: () => void
+  onRestart: () => void
+}) {
   const [input, setInput] = useState("")
   const scrollerRef = useRef<HTMLDivElement>(null)
-  const timeZone =
-    typeof window !== "undefined"
-      ? Intl.DateTimeFormat().resolvedOptions().timeZone
-      : "UTC"
 
-  const { messages, setMessages, sendMessage, status, error, stop } = useChat({
-    transport: new DefaultChatTransport({
-      api: "/api/chat",
-      prepareSendMessagesRequest: ({ messages }) => ({
-        body: { messages, timeZone },
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        prepareSendMessagesRequest: ({ messages, id }) => ({
+          body: {
+            messages,
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            conversationId: id ?? conversationId,
+          },
+        }),
       }),
-    }),
+    [conversationId],
+  )
+
+  // Passing id: undefined makes this version of useChat build a new chat on
+  // every render, which drops the message before it can appear.
+  const { id, messages, sendMessage, status, error, stop } = useChat({
+    ...(conversationId ? { id: conversationId } : {}),
+    messages: initialMessages,
+    transport,
+    onFinish: ({ messages: nextMessages }) => {
+      void fetch("/api/chat/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId: conversationId ?? id,
+          messages: nextMessages,
+        }),
+      })
+    },
   })
 
   // Auto-scroll
@@ -75,40 +202,30 @@ export function ChatPanel({ onCalendarChange }: { onCalendarChange?: () => void 
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-xl border border-border bg-card">
-      <header className="flex items-center justify-between border-b border-border/80 px-4 py-3">
-        <div className="flex items-center gap-2.5">
-          <span
-            aria-hidden
-            className="flex h-7 w-7 items-center justify-center rounded-sm bg-foreground font-serif text-[14px] leading-none text-background"
-          >
-            <span className="-mt-px italic">C</span>
-          </span>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium leading-tight tracking-tight">Calendar Assistant</span>
-            <span className="text-[11px] text-muted-foreground">Gemini 2.5 Flash</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          {messages.length > 0 && !isBusy ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setMessages([])}
-              className="h-8 gap-1.5 px-2 text-xs"
-              aria-label="Clear conversation"
-            >
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-              Clear
-            </Button>
-          ) : null}
-          {isBusy ? (
-            <Button type="button" variant="ghost" size="sm" onClick={() => stop()}>
-              Stop
-            </Button>
-          ) : null}
-        </div>
-      </header>
+      <ChatHeader
+        actions={
+          <>
+            {messages.length > 0 && !isBusy ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onRestart()}
+                className="h-8 gap-1.5 px-2 text-xs"
+                aria-label="Clear conversation"
+              >
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                Clear
+              </Button>
+            ) : null}
+            {isBusy ? (
+              <Button type="button" variant="ghost" size="sm" onClick={() => stop()}>
+                Stop
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       <div ref={scrollerRef} className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
@@ -135,11 +252,11 @@ export function ChatPanel({ onCalendarChange }: { onCalendarChange?: () => void 
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <p className="font-medium">Couldn&apos;t complete that request</p>
-              <p className="mt-0.5 break-words text-destructive/80">{error.message || "Something went wrong."}</p>
+              <p className="mt-0.5 break-words text-destructive/80">{formatError(error.message)}</p>
             </div>
             <button
               type="button"
-              onClick={() => setMessages([])}
+              onClick={() => onRestart()}
               className="shrink-0 rounded border border-destructive/40 px-2 py-1 font-medium hover:bg-destructive/10"
             >
               Reset
