@@ -43,8 +43,8 @@ export async function POST(req: Request) {
         timeMax: z.string().describe("ISO 8601 upper bound (exclusive). e.g. 2025-01-08T00:00:00Z"),
         query: z
           .string()
-          .nullable()
-          .describe("Optional free-text search across event fields. Pass null when not needed."),
+          .optional()
+          .describe("Optional free-text search across event fields. Omit when not needed."),
       }),
       execute: async ({ timeMin, timeMax, query }) => {
         const events = await listEvents({ timeMin, timeMax, q: query ?? undefined, maxResults: 50 })
@@ -66,12 +66,12 @@ export async function POST(req: Request) {
         summary: z.string().describe("Title of the event"),
         start: z.string().describe("ISO 8601 start datetime, e.g. 2025-01-15T14:00:00"),
         end: z.string().describe("ISO 8601 end datetime, e.g. 2025-01-15T15:00:00"),
-        description: z.string().nullable().describe("Optional notes. Pass null when not needed."),
-        location: z.string().nullable().describe("Optional location. Pass null when not needed."),
+        description: z.string().optional().describe("Optional notes. Omit when not needed."),
+        location: z.string().optional().describe("Optional location. Omit when not needed."),
         attendees: z
           .array(z.string())
-          .nullable()
-          .describe("Optional list of attendee emails. Pass null when not needed."),
+          .optional()
+          .describe("Optional list of attendee emails. Omit when not needed."),
       }),
       execute: async ({ summary, start, end, description, location, attendees }) => {
         const event = await createEvent({
@@ -96,11 +96,11 @@ export async function POST(req: Request) {
       description: "Update fields on an existing event by ID. Only pass fields you want to change.",
       inputSchema: z.object({
         id: z.string().describe("The Google Calendar event ID"),
-        summary: z.string().nullable(),
-        start: z.string().nullable().describe("ISO 8601 start datetime, or null to leave unchanged"),
-        end: z.string().nullable().describe("ISO 8601 end datetime, or null to leave unchanged"),
-        description: z.string().nullable(),
-        location: z.string().nullable(),
+        summary: z.string().optional().describe("New title. Omit to leave unchanged."),
+        start: z.string().optional().describe("ISO 8601 start datetime. Omit to leave unchanged."),
+        end: z.string().optional().describe("ISO 8601 end datetime. Omit to leave unchanged."),
+        description: z.string().optional().describe("New notes. Omit to leave unchanged."),
+        location: z.string().optional().describe("New location. Omit to leave unchanged."),
       }),
       execute: async ({ id, summary, start, end, description, location }) => {
         const event = await updateEvent(id, {
@@ -146,7 +146,7 @@ Guidelines:
 - If a request is ambiguous (e.g. "schedule a meeting"), ask one clarifying question.
 - Today's date is ${now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: tz })}.`
 
-  const model = google("gemini-2.5-flash")
+  const model = google("gemini-3.6-flash")
   console.log("[v0] chat route using provider:", model.provider, "model:", model.modelId)
 
   const result = streamText({
@@ -155,6 +155,14 @@ Guidelines:
     messages: await convertToModelMessages(messages),
     tools,
     stopWhen: stepCountIs(8),
+    providerOptions: {
+      google: {
+        thinkingConfig: {
+          thinkingLevel: "low",
+          includeThoughts: false,
+        },
+      },
+    },
     onError: ({ error }) => {
       console.log("[v0] streamText error:", error instanceof Error ? error.message : String(error))
     },

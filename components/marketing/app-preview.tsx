@@ -120,7 +120,7 @@ export function AppPreview() {
             <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
               Calendar Assistant
             </p>
-            <p className="text-[10px] text-muted-foreground">Gemini 2.5 Flash</p>
+            <p className="text-[10px] text-muted-foreground">Gemini 3.6 Flash</p>
           </div>
 
           <div className="mt-3 space-y-2.5 text-[13px] leading-relaxed">
