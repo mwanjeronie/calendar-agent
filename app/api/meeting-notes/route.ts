@@ -63,7 +63,7 @@ Keep the entire output under 220 words.`
 
   const google = createGoogleGenerativeAI({ apiKey })
   const result = streamText({
-    model: google("gemini-3.6-flash"),
+    model: google("gemini-3.5-flash-lite"),
     providerOptions: {
       google: {
         thinkingConfig: {
